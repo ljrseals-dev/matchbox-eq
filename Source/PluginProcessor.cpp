@@ -45,7 +45,7 @@ MatchboxEQAudioProcessor::createParameterLayout()
     return layout;
 }
 
-void MatchboxEQAudioProcessor::prepareToPlay (double sampleRate, int /*samplesPerBlock*/)
+void MatchboxEQAudioProcessor::prepareToPlay (double sampleRate, int)
 {
     eq = std::make_unique<MatchboxEQ> ((float) sampleRate);
 }

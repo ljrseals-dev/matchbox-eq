@@ -3,12 +3,10 @@ project (MatchboxEQ VERSION 1.0.0)
 
 set (CMAKE_CXX_STANDARD 17)
 
-# Universal Binary on macOS (Apple Silicon + Intel)
 if (APPLE)
-    set (CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build Universal Binary")
+    set (CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Universal Binary")
 endif()
 
-# Point this at your JUCE install (clone https://github.com/juce-framework/JUCE)
 add_subdirectory (JUCE)
 
 juce_add_plugin (MatchboxEQ

@@ -1,13 +1,6 @@
 // MatchboxEQ.h
-// Corrected C++ DSP engine for MatchboxEQ VST3/AU
-// Fixes applied:
-//   - Independent mid/side bell filter states (no crosstalk)
-//   - asked_bands clamped to [1, 12]
-//   - Envelope follower slowed to ~20 ms (alpha = 0.001)
-//   - Per-sample frequency modulation removed
-//   - Portable M_PI
-//   - Soft-clip unity-gain compensated
-//   - Coefficient-friendly structure for future caching
+// Shipping-ready C++ DSP engine
+// Critical fixes applied + dead code removed
 
 #pragma once
 #include <cmath>
@@ -24,19 +17,19 @@ public:
     MatchboxEQ (float sample_rate = 48000.0f)
         : sr (sample_rate), init_done (false)
     {
-        std::memset (band_energy, 0, sizeof (band_energy));
-        std::memset (bp_state0, 0, sizeof (bp_state0));
-        std::memset (bp_state1, 0, sizeof (bp_state1));
-        std::memset (bp_state2, 0, sizeof (bp_state2));
-        std::memset (bp_state3, 0, sizeof (bp_state3));
-        std::memset (bell_s0_mid, 0, sizeof (bell_s0_mid));
-        std::memset (bell_s1_mid, 0, sizeof (bell_s1_mid));
-        std::memset (bell_s2_mid, 0, sizeof (bell_s2_mid));
-        std::memset (bell_s3_mid, 0, sizeof (bell_s3_mid));
-        std::memset (bell_s0_side, 0, sizeof (bell_s0_side));
-        std::memset (bell_s1_side, 0, sizeof (bell_s1_side));
-        std::memset (bell_s2_side, 0, sizeof (bell_s2_side));
-        std::memset (bell_s3_side, 0, sizeof (bell_s3_side));
+        std::memset (band_energy,   0, sizeof (band_energy));
+        std::memset (bp_state0,     0, sizeof (bp_state0));
+        std::memset (bp_state1,     0, sizeof (bp_state1));
+        std::memset (bp_state2,     0, sizeof (bp_state2));
+        std::memset (bp_state3,     0, sizeof (bp_state3));
+        std::memset (bell_s0_mid,   0, sizeof (bell_s0_mid));
+        std::memset (bell_s1_mid,   0, sizeof (bell_s1_mid));
+        std::memset (bell_s2_mid,   0, sizeof (bell_s2_mid));
+        std::memset (bell_s3_mid,   0, sizeof (bell_s3_mid));
+        std::memset (bell_s0_side,  0, sizeof (bell_s0_side));
+        std::memset (bell_s1_side,  0, sizeof (bell_s1_side));
+        std::memset (bell_s2_side,  0, sizeof (bell_s2_side));
+        std::memset (bell_s3_side,  0, sizeof (bell_s3_side));
     }
 
     void process (float& inL, float& inR,
@@ -47,17 +40,12 @@ public:
         if (! init_done)
             init();
 
-        // Buffer-level modulation (kept for future use; currently unused on coeffs)
-        mod_phase += 2.0f * (float) M_PI * mod_rate / sr;
-        if (mod_phase > 2.0f * (float) M_PI)
-            mod_phase -= 2.0f * (float) M_PI;
-
-        // Analyse mono sum
+        // Mono analysis
         const float mono = (inL + inR) * 0.5f;
         for (int i = 0; i < 50; ++i)
             analyse_band (mono, i);
 
-        // FIX: clamp groups to [1, 12]
+        // Clamp groups to [1, 12]
         const int groups = std::max (1, std::min (12, (int) (asked_bands + 0.5f)));
         const int bands_per_group = 50 / groups;
         const int remainder = 50 % groups;
@@ -79,7 +67,7 @@ public:
             group_energy[g] = sum / (float) size;
         }
 
-        // Demon selection: top-N by energy
+        // Demon selection (top-N)
         float temp[50];
         for (int i = 0; i < 50; ++i)
             temp[i] = band_energy[i];
@@ -102,7 +90,7 @@ public:
             selected[maxi] = true;
         }
 
-        // Compute gains
+        // Gain calculation
         float gain_50[50];
         for (int i = 0; i < 50; ++i)
         {
@@ -128,10 +116,10 @@ public:
                 base *= comp;
             }
 
-            gain_50[i] = clamp (base, 0.7079f, 1.4125f); // ±3 dB war-avoidance
+            gain_50[i] = clamp (base, 0.7079f, 1.4125f); // ±3 dB
         }
 
-        // Mid / side with independent filter states
+        // Mid / side with independent states
         float mid  = (inL + inR) * 0.5f;
         float side = (inL - inR) * 0.5f;
         float out_mid  = mid;
@@ -147,7 +135,7 @@ public:
         inL = out_mid + out_side;
         inR = out_mid - out_side;
 
-        // Soft clip with unity-gain compensation
+        // Soft-clip with unity-gain compensation
         constexpr float drive_comp = 0.85f / 1.1045f;
         inL = std::tanh (inL * 1.3f) * drive_comp;
         inR = std::tanh (inR * 1.3f) * drive_comp;
@@ -162,12 +150,10 @@ private:
     // Analysis BPF states
     float bp_state0[50], bp_state1[50], bp_state2[50], bp_state3[50];
 
-    // FIX: independent mid / side bell states
+    // Independent mid / side bell states
     float bell_s0_mid[50],  bell_s1_mid[50],  bell_s2_mid[50],  bell_s3_mid[50];
     float bell_s0_side[50], bell_s1_side[50], bell_s2_side[50], bell_s3_side[50];
 
-    float mod_phase = 0.0f;
-    static constexpr float mod_rate     = 0.14f;
     static constexpr float energy_alpha = 0.001f; // ~20 ms
 
     void init()
@@ -207,7 +193,6 @@ private:
         bp_state3[idx] = bp_state2[idx];
         bp_state2[idx] = filtered;
 
-        // Slow envelope follower
         band_energy[idx] += energy_alpha * (std::abs (filtered) - band_energy[idx]);
     }
 

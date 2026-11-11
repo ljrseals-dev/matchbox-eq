@@ -1,84 +1,85 @@
-# MatchboxEQ — Corrected VST-Ready Edition
+# MatchboxEQ — Shipping-Ready VST3 / AU
 
 50-band adaptive spectral EQ with “demon” resonance hunters.  
-All critical bugs from the original analysis have been fixed.
+All critical DSP bugs fixed. Custom LookAndFeel. Universal Binary ready.
 
-## What’s included
+## Project layout
 
-| File | Purpose |
-|------|---------|
-| `Source/MatchboxEQ.h` | Core DSP engine (C++) – drop-in for JUCE |
-| `Source/PluginProcessor.h/.cpp` | JUCE AudioProcessor + APVTS |
-| `Source/PluginEditor.h/.cpp` | Simple 800×400 GUI |
-| `Source/Pure_python.py` | Corrected reference Python implementation |
-| `CMakeLists.txt` | Universal Binary (arm64 + x86_64) build |
-
-## Critical fixes applied
-
-1. **Mid/side bell states are now independent**  
-   Separate `bell_*_mid[]` and `bell_*_side[]` arrays → no more M/S crosstalk.
-
-2. **`asked_bands` clamped to [1, 12]**  
-   Prevents buffer overflow (C++) and NaN (Python).
-
-3. **Envelope follower slowed to α = 0.001 (~20 ms)**  
-   Eliminates rectifier-ripple distortion on bass bands (was α = 0.04 ≈ 0.5 ms).
-
-4. **Per-sample frequency modulation removed**  
-   Was inaudible but forced constant coefficient recalculation.
-
-5. **Soft-clip is unity-gain compensated**  
-   `tanh(x·1.3) · (0.85 / 1.1045)`.
-
-6. **Portable `M_PI`** and proper coefficient caching in Python.
-
-## Building the VST3 / AU (macOS Universal)
-
-```bash
-# 1. Clone JUCE next to this folder
-git clone https://github.com/juce-framework/JUCE.git
-
-# 2. Configure & build
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release
-
-# 3. Result
-# build/MatchboxEQ_artefacts/VST3/MatchboxEQ.vst3
-# build/MatchboxEQ_artefacts/AU/MatchboxEQ.component
+```
+MatchboxEQ_VST_Corrected/
+├── CMakeLists.txt
+├── README.md
+├── scripts/build_mac.sh
+├── Source/
+│   ├── MatchboxEQ.h          ← cleaned DSP (no dead mod_phase)
+│   ├── PluginProcessor.h/.cpp
+│   ├── PluginEditor.h/.cpp   ← custom MatchboxLookAndFeel
+│   └── Pure_python.py        ← reference implementation
+└── docs/
+    └── MatchboxEQ_Cross_Domain_Paper_Lewis_Seals.pdf
 ```
 
-Copy the `.vst3` bundle to:
-- macOS: `~/Library/Audio/Plug-Ins/VST3/`
-- Windows: `C:\Program Files\Common Files\VST3\`
+## Critical fixes (final)
+
+| Issue | Status |
+|-------|--------|
+| Mid/side shared filter state | Fixed – independent arrays |
+| `asked_bands` overflow / NaN | Fixed – clamped [1, 12] |
+| Envelope α = 0.04 (distortion) | Fixed – α = 0.001 (~20 ms) |
+| Dead `mod_phase` code | Removed |
+| Soft-clip gain | Unity compensated |
+| Portable `M_PI` | Present |
+| UI | Custom LookAndFeel (no external assets) |
+
+> **Note for the paper:** Section 3.3 still mentions the original α = 0.04.  
+> The production code uses 0.001. Update the paper text before formal publication.
+
+## Build (macOS Universal)
+
+```bash
+cd MatchboxEQ_VST_Corrected
+./scripts/build_mac.sh
+```
+
+Or manually:
+
+```bash
+git clone --depth 1 https://github.com/juce-framework/JUCE.git
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+Install:
+
+```bash
+cp -R build/MatchboxEQ_artefacts/Release/VST3/MatchboxEQ.vst3 \
+      ~/Library/Audio/Plug-Ins/VST3/
+```
 
 ## Parameters
 
 | ID | Range | Default | Description |
 |----|-------|---------|-------------|
-| `askedBands` | 1–12 | 5 | How many conceptual groups |
-| `demonCount` | 1–50 | 8 | How many resonance-hunting demons |
-| `bitDepth` | 16/20/24 | 24 | High-frequency roll-off profile |
-| `genreId` | 0–3 | 0 | Neo-Classical / Cinematic Pop / Jazz-Hip-Hop / Flat |
-| `unisonWeight` | 0–1 | 0.6 | Harmonic-interval weighting |
-| `outputGain` | –24…+24 dB | 0 | Master output |
-| `mix` | 0–1 | 1 | Dry/Wet |
+| askedBands | 1–12 | 5 | Conceptual groups |
+| demonCount | 1–50 | 8 | Resonance hunters |
+| bitDepth | 16/20/24 | 24 | HF roll-off profile |
+| genreId | 0–3 | 0 | Genre tilt |
+| unisonWeight | 0–1 | 0.6 | Harmonic weighting |
+| outputGain | –24…+24 dB | 0 | Master |
+| mix | 0–1 | 1 | Dry/Wet |
 
-## Philosophy
+## Academic paper
 
-Ask for 4 bands → get a 50-band matchbox.  
-The demons are adaptive cuts that ride the loudest resonances.  
-Everything else is a gentle, level-aware spectral tilt.
+Full ~12 800-word paper with charts is in:
 
-Build it, load it, and ask it how many denons it wants.
-
-## Academic Paper
-
-A full technical paper (~12,800 words) is included:
-
-**`docs/MatchboxEQ_Cross_Domain_Paper_Lewis_Seals.pdf`**
-
-Title: *MatchboxEQ: Adaptive Spectral Processing with Agent-Based Resonance Suppression — Primary Audio Applications and Cross-Domain Extensions to Computational Photography and Biomedical / Medical-Technical Signal Engineering*
+`docs/MatchboxEQ_Cross_Domain_Paper_Lewis_Seals.pdf`
 
 Author: Lewis James Seals (theRealla)
 
-The paper covers the algorithm, evaluation, and extensions to photography and medical/tech engineering, with charts and spectrograms.
+## Philosophy
+
+Ask for 4 bands → receive a 50-band matchbox.  
+The demons hunt the loudest resonances.  
+The rest is a gentle, level-aware spectral tilt.
+
+Build it. Load it. Ask how many denons it wants.
