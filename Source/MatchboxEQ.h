@@ -116,8 +116,8 @@ public:
                 // to balance the spectrum. But DON'T lift a group that's
                 // essentially silent — that just amplifies noise (fridge, room tone).
                 constexpr float k_target = 0.015f;   // abs-mean energy target
-                constexpr float k_floor  = 0.012f;   // ~ -50 dBFS abs mean
-                constexpr float k_ramp   = 0.008f;   // smooth ramp into full comp
+                constexpr float k_floor  = 0.003f;   // ~ -50 dBFS abs mean
+                constexpr float k_ramp   = 0.010f;   // smooth ramp into full comp
 
                 const float raw_comp = clamp (k_target / (group_energy[g] + 1e-6f), 0.7f, 1.4f);
                 const float gate     = clamp ((group_energy[g] - k_floor) / k_ramp, 0.0f, 1.0f);
