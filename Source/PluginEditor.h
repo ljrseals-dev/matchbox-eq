@@ -2,22 +2,17 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "PluginProcessor.h"
 
-//==============================================================================
 class MatchboxLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
     MatchboxLookAndFeel();
-
     void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height,
                            float sliderPosProportional, float rotaryStartAngle,
                            float rotaryEndAngle, juce::Slider&) override;
-
     void drawComboBox (juce::Graphics&, int width, int height, bool isButtonDown,
-                       int buttonX, int buttonY, int buttonW, int buttonH,
-                       juce::ComboBox&) override;
+                       int buttonX, int buttonY, int buttonW, int buttonH, juce::ComboBox&) override;
 };
 
-//==============================================================================
 class MatchboxEQAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
