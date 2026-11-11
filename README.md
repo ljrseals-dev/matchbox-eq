@@ -83,3 +83,11 @@ The demons hunt the loudest resonances.
 The rest is a gentle, level-aware spectral tilt.
 
 Build it. Load it. Ask how many denons it wants.
+
+## Changelog (noise-floor fix)
+
+- **Gate non-demon compensation below ~−50 dBFS** (`k_floor = 0.012`).
+  Empty / near-empty groups are no longer boosted into the noise floor.
+  This removes the ~+10 dB HF hiss that appeared on quiet material
+  (home fridge, room tone, soft pads). Demon cuts are unchanged.
+  Music-level material continues to receive the original balancing behaviour.
