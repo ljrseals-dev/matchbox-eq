@@ -20,7 +20,7 @@ MatchboxEQAudioProcessor::createParameterLayout()
         NormalisableRange<float> (1.0f, 12.0f, 1.0f), 5.0f));
 
     layout.add (std::make_unique<AudioParameterInt> (
-        "demonCount", "Denons (1-50)", 1, 50, 8));
+        "demonCount", "Demons (0-50)", 0, 50, 8));
 
     layout.add (std::make_unique<AudioParameterChoice> (
         "bitDepth", "Bit Depth",
@@ -45,9 +45,26 @@ MatchboxEQAudioProcessor::createParameterLayout()
     return layout;
 }
 
+bool MatchboxEQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+{
+    const auto input = layouts.getMainInputChannelSet();
+    const auto output = layouts.getMainOutputChannelSet();
+
+    if (input != output)
+        return false;
+
+    return input == juce::AudioChannelSet::mono()
+        || input == juce::AudioChannelSet::stereo();
+}
+
 void MatchboxEQAudioProcessor::prepareToPlay (double sampleRate, int)
 {
-    eq = std::make_unique<MatchboxEQ> ((float) sampleRate);
+    eq = std::make_unique<MatchboxEQ> (static_cast<float> (sampleRate));
+}
+
+void MatchboxEQAudioProcessor::releaseResources()
+{
+    eq.reset();
 }
 
 void MatchboxEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
@@ -56,31 +73,50 @@ void MatchboxEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::ScopedNoDenormals noDenormals;
 
     const int numSamples = buffer.getNumSamples();
-    float* left  = buffer.getWritePointer (0);
-    float* right = buffer.getWritePointer (1);
+    const int inputChannels = getTotalNumInputChannels();
+    const int outputChannels = getTotalNumOutputChannels();
 
-    const float asked   = apvts.getRawParameterValue ("askedBands")->load();
-    const int   demons  = (int) apvts.getRawParameterValue ("demonCount")->load();
-    const int   bitIdx  = (int) apvts.getRawParameterValue ("bitDepth")->load();
-    const int   genre   = (int) apvts.getRawParameterValue ("genreId")->load();
-    const float unison  = apvts.getRawParameterValue ("unisonWeight")->load();
-    const float outGain = juce::Decibels::decibelsToGain (
-                              apvts.getRawParameterValue ("outputGain")->load());
-    const float mix     = apvts.getRawParameterValue ("mix")->load();
+    for (int channel = inputChannels; channel < outputChannels; ++channel)
+        buffer.clear (channel, 0, numSamples);
 
-    const float bit = (bitIdx == 0) ? 16.0f : (bitIdx == 1) ? 20.0f : 24.0f;
+    if (numSamples <= 0 || inputChannels <= 0 || buffer.getNumChannels() <= 0)
+        return;
+
+    float* left = buffer.getWritePointer (0);
+    float* right = inputChannels > 1 && buffer.getNumChannels() > 1
+                 ? buffer.getWritePointer (1) : nullptr;
+
+    const float asked = apvts.getRawParameterValue ("askedBands")->load();
+    const int demons = static_cast<int> (apvts.getRawParameterValue ("demonCount")->load());
+    const int bitIndex = static_cast<int> (apvts.getRawParameterValue ("bitDepth")->load());
+    const int genre = static_cast<int> (apvts.getRawParameterValue ("genreId")->load());
+    const float unison = apvts.getRawParameterValue ("unisonWeight")->load();
+    const float outputGain = juce::Decibels::decibelsToGain (
+        apvts.getRawParameterValue ("outputGain")->load());
+    const float mix = apvts.getRawParameterValue ("mix")->load();
+    const float bitDepth = bitIndex == 0 ? 16.0f : (bitIndex == 1 ? 20.0f : 24.0f);
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float dryL = left[i];
-        float dryR = right[i];
-        float wetL = left[i];
-        float wetR = right[i];
+        // Sanitize the dry path as well as the DSP path. Otherwise mix=0
+        // (or a partially dry mix) can pass NaN/Inf straight to the host even
+        // though MatchboxEQ::process() sanitizes its own input copy.
+        const float rawLeft = left[i];
+        const float rawRight = right != nullptr ? right[i] : rawLeft;
+        const float dryLeft = std::isfinite (rawLeft)
+                            ? juce::jlimit (-64.0f, 64.0f, rawLeft) : 0.0f;
+        const float dryRight = std::isfinite (rawRight)
+                             ? juce::jlimit (-64.0f, 64.0f, rawRight) : 0.0f;
+        float wetLeft = dryLeft;
+        float wetRight = dryRight;
 
-        eq->process (wetL, wetR, asked, demons, bit, genre, unison);
+        if (eq != nullptr)
+            eq->process (wetLeft, wetRight, asked, demons, bitDepth, genre, unison);
 
-        left[i]  = (dryL * (1.0f - mix) + wetL * mix) * outGain;
-        right[i] = (dryR * (1.0f - mix) + wetR * mix) * outGain;
+        left[i] = (dryLeft * (1.0f - mix) + wetLeft * mix) * outputGain;
+
+        if (right != nullptr)
+            right[i] = (dryRight * (1.0f - mix) + wetRight * mix) * outputGain;
     }
 }
 
@@ -93,13 +129,17 @@ void MatchboxEQAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml (state.createXml());
-    copyXmlToBinary (*xml, destData);
+    if (xml != nullptr)
+        copyXmlToBinary (*xml, destData);
 }
 
 void MatchboxEQAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
+    if (data == nullptr || sizeInBytes <= 0)
+        return;
+
     std::unique_ptr<juce::XmlElement> xml (getXmlFromBinary (data, sizeInBytes));
-    if (xml.get() != nullptr && xml->hasTagName (apvts.state.getType()))
+    if (xml != nullptr && xml->hasTagName (apvts.state.getType()))
         apvts.replaceState (juce::ValueTree::fromXml (*xml));
 }
 

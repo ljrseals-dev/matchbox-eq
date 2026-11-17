@@ -1,4 +1,5 @@
 #pragma once
+
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "MatchboxEQ.h"
 
@@ -9,8 +10,10 @@ public:
     ~MatchboxEQAudioProcessor() override = default;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
-    void releaseResources() override {}
+    void releaseResources() override;
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+
+    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }

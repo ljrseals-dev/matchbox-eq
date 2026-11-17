@@ -1,0 +1,7 @@
+/build/
+/cmake-build-*/
+/.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+/build-macos-universal/

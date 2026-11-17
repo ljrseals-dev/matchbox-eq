@@ -59,7 +59,7 @@ MatchboxEQAudioProcessorEditor::MatchboxEQAudioProcessorEditor (MatchboxEQAudioP
     setSize (800, 400);
 
     setupKnob (bandsSlider,  bandsLbl,  "BANDS");
-    setupKnob (demonsSlider, demonsLbl, "DENONS");
+    setupKnob (demonsSlider, demonsLbl, "DEMONS");
     setupKnob (unisonSlider, unisonLbl, "UNISON");
     setupKnob (outputSlider, outputLbl, "OUTPUT");
     setupKnob (mixSlider,    mixLbl,    "MIX");
