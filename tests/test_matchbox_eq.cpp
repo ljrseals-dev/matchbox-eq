@@ -36,6 +36,9 @@ namespace
 
 int main()
 {
+    static_assert (MatchboxEQ::kGateTarget == 0.015f, "gate target contract");
+    static_assert (MatchboxEQ::kGateFloor == 0.007f, "gate floor contract");
+    static_assert (MatchboxEQ::kGateRamp == 0.008f, "gate ramp contract");
     {
         MatchboxEQ eq;
         std::vector<float> left (4096, 0.0f);
