@@ -10,6 +10,11 @@
 class MatchboxEQ
 {
 public:
+    // Shared quiet-signal calibration contract; mirrored by the Python reference.
+    static constexpr float kGateTarget = 0.015f;
+    static constexpr float kGateFloor = 0.007f;
+    static constexpr float kGateRamp = 0.008f;
+
     explicit MatchboxEQ (float sample_rate = 48000.0f)
         : sr (sanitise_sample_rate (sample_rate)),
           energy_alpha (1.0f - std::exp (-1.0f / (0.0208f * sr))),
@@ -139,13 +144,9 @@ public:
             {
                 // Keep near-silent groups at unity; smoothly engage compensation
                 // only after the measured group envelope clears the noise floor.
-                constexpr float k_target = 0.015f;
-                constexpr float k_floor = 0.003f;
-                constexpr float k_ramp = 0.010f;
-
-                const float raw_comp = clamp (k_target / (group_energy[group] + 1.0e-6f),
+                const float raw_comp = clamp (kGateTarget / (group_energy[group] + 1.0e-6f),
                                               0.7f, 1.4f);
-                const float gate = clamp ((group_energy[group] - k_floor) / k_ramp,
+                const float gate = clamp ((group_energy[group] - kGateFloor) / kGateRamp,
                                           0.0f, 1.0f);
                 base *= 1.0f + gate * (raw_comp - 1.0f);
             }
