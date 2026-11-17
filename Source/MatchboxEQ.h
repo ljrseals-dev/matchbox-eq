@@ -56,8 +56,8 @@ public:
         if (! init_done)
             init();
 
-        if (! std::isfinite (inL)) inL = 0.0f;
-        if (! std::isfinite (inR)) inR = 0.0f;
+        inL = std::isfinite (inL) ? clamp (inL, -64.0f, 64.0f) : 0.0f;
+        inR = std::isfinite (inR) ? clamp (inR, -64.0f, 64.0f) : 0.0f;
 
         const float safe_asked_bands = clamp (std::isfinite (asked_bands) ? asked_bands : 5.0f,
                                               1.0f, 12.0f);

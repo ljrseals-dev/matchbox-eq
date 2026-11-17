@@ -111,6 +111,11 @@ int main()
         right = -0.1f;
         eq.process (left, right, 1000000.0f, 1000, 24.0f, -99, 1.5f);
         check (finite_pair (left, right), "out-of-range controls are safely bounded");
+
+        left = std::numeric_limits<float>::max();
+        right = std::numeric_limits<float>::max();
+        eq.process (left, right, 5.0f, 8, 24.0f, 0, 0.6f);
+        check (finite_pair (left, right), "extreme finite samples are bounded before DSP");
     }
 
     {

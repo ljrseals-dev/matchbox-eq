@@ -133,6 +133,7 @@ class MatchboxEQ:
 
         # Match the C++ defensive input handling; NaN/Inf must not poison state.
         audio = np.where(np.isfinite(audio), audio, 0.0)
+        np.clip(audio, -64.0, 64.0, out=audio)
         asked = np.clip(self._finite_float(asked_bands, 5.0), 1.0, 12.0)
         groups = max(1, min(12, int(math.floor(asked + 0.5))))
 

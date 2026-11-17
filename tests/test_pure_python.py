@@ -44,6 +44,7 @@ class MatchboxEQReferenceTests(unittest.TestCase):
         audio[3, 0] = np.nan
         audio[7, 1] = np.inf
         audio[11, 0] = -np.inf
+        audio[13, :] = np.finfo(np.float64).max
 
         output = eq.process(
             audio,
