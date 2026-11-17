@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD_DIR="${ROOT}/build"
+BUILD_DIR="${ROOT}/build-macos-universal"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
     echo "error: build_mac.sh must run on macOS" >&2
@@ -30,5 +30,5 @@ ctest --test-dir "${BUILD_DIR}" -C Release --output-on-failure
 
 echo
 echo "Universal macOS build and DSP tests completed."
-echo "VST3: build/MatchboxEQ_artefacts/Release/VST3/MatchboxEQ.vst3"
-echo "AU:   build/MatchboxEQ_artefacts/Release/AU/MatchboxEQ.component"
+echo "VST3: build-macos-universal/MatchboxEQ_artefacts/Release/VST3/MatchboxEQ.vst3"
+echo "AU:   build-macos-universal/MatchboxEQ_artefacts/Release/AU/MatchboxEQ.component"
