@@ -1,147 +1,87 @@
-# MatchboxEQ — Corrected VST-Ready Edition
+# MatchboxEQ
 
-50-band adaptive spectral EQ with “demon” resonance hunters.
+A 50-band adaptive spectral equalizer with resonance-hunting cuts, level-aware compensation, and a custom JUCE interface.
 
-The merged implementation includes the quiet-signal compensation gate, independent mid/side filter state, corrected envelope smoothing, and a custom JUCE C++ editor using `MatchboxLookAndFeel`.
+## Current implementation
 
-## What’s included
+- Framework-free C++17 DSP core in Source/MatchboxEQ.h.
+- JUCE audio processor with APVTS state and mono/stereo bus support.
+- Custom native editor in Source/PluginEditor.cpp.
+- Offline Python reference in Source/Pure_python.py.
+- C++ regression tests, Python reference tests, and checked-in WAV sample validation.
 
-| File | Purpose |
-|------|---------|
-| `Source/MatchboxEQ.h` | Core 50-band C++ DSP engine |
-| `Source/PluginProcessor.h/.cpp` | JUCE `AudioProcessor`, APVTS parameters, and processing |
-| `Source/PluginEditor.h/.cpp` | Custom 800×400 editor and `MatchboxLookAndFeel` |
-| `Source/Pure_python.py` | Pure-Python reference implementation |
-| `CMakeLists.txt` | JUCE CMake plugin project; VST3, AU, and Standalone formats |
-| `scripts/build_mac.sh` | macOS build helper; clones JUCE when it is not present |
-| `docs/MatchboxEQ_Cross_Domain_Paper_Lewis_Seals.pdf` | Technical paper |
+The VU graphic and four labeled panel shapes in the editor are decorative. They are not live metering or interactive transport controls.
 
-## Critical DSP fixes
+## DSP safeguards and corrections
 
-1. **Quiet-signal compensation gate**
+1. **Quiet-signal compensation gate.** Non-resonance compensation stays at unity below the group-energy floor and blends toward the calculated compensation across a smooth ramp. The production constants are k_target = 0.015, k_floor = 0.003, and k_ramp = 0.010.
+2. **Continuous filter history.** Mid and side bell filters continue advancing their state at unity gain. This prevents stale state from producing a transient when adaptive gain becomes active again.
+3. **Sample-rate-safe analysis.** The 50 analysis frequencies end at min(18 kHz, 0.45 × sample rate), keeping every band below Nyquist. Sample rates below 8 kHz or non-finite sample-rate inputs fall back to 48 kHz in the C++ core; the Python reference rejects them.
+4. **Defensive parameter and sample handling.** Group count, demon count, genre, and unison weight are bounded. Non-finite input samples are replaced with silence so invalid values cannot poison filter state.
+5. **Mono/stereo host safety.** The processor accepts matching mono or stereo input/output layouts and never assumes a second channel exists.
+6. **Sample-rate-scaled envelope.** The envelope time constant is 20.8 ms, keeping its response consistent across supported sample rates.
+7. **Independent DSP build and tests.** The core and its regression tests build without JUCE. The plugin is built when a JUCE checkout is supplied.
 
-   Non-demon compensation is blended smoothly from unity instead of boosting near-silent groups indiscriminately. This is intended to prevent quiet high-frequency material—such as room tone or appliance noise—from being lifted into an audible noise-floor swell, while retaining compensation as group energy rises.
+MatchboxEQ::getLastGroupCount() and getLastGroupEnergy() expose the most recently measured group energies for offline validation. These diagnostics are written by the processing thread and are **not safe to read concurrently** from a UI or other thread.
 
-   The production C++ constants are `k_target = 0.015f`, `k_floor = 0.003f`, and `k_ramp = 0.010f`. The gate is applied to non-demon compensation; demon resonance cuts are separate.
+## Build and test the DSP core
 
-2. **Independent mid/side bell-filter state**
+A C++17 compiler and CMake 3.22 or newer are sufficient:
 
-   Mid and side processing use separate state arrays, avoiding shared filter history between the two paths.
-
-3. **Band-count bounds**
-
-   `asked_bands` is rounded and clamped to [1, 12] in C++, preventing invalid group counts and out-of-range group indexing.
-
-4. **Slower envelope follower**
-
-   The C++ energy follower uses `alpha = 0.001f`, reducing the rapid envelope movement associated with the former `0.04` setting.
-
-5. **Removed unused per-sample modulation state**
-
-   The unused `mod_phase` path has been removed; it is not part of the current DSP path.
-
-6. **Unity-compensated soft clipping**
-
-   The output stage uses:
-
-   ```cpp
-   constexpr float drive_comp = 0.85f / 1.1045f;
-   inL = std::tanh (inL * 1.3f) * drive_comp;
-   inR = std::tanh (inR * 1.3f) * drive_comp;
-   ```
-
-7. **Custom native JUCE editor**
-
-   `PluginEditor.cpp` implements `MatchboxLookAndFeel` in C++. Rotary controls and combo boxes are drawn in code, with no external image assets. The painted VU graphic and four labeled switch shapes are decorative; they are not live metering or interactive switches.
-
-## Building VST3 / AU
-
-JUCE is included as a sibling source directory at `JUCE/` and is added by `CMakeLists.txt`.
-
-### macOS — Universal Binary (Apple Silicon + Intel)
-
-The project sets `CMAKE_OSX_ARCHITECTURES` to `arm64;x86_64` on Apple platforms.
-
-```bash
-# From the repository root
-git clone --depth 1 https://github.com/juce-framework/JUCE.git
-cmake -S . -B build -G Xcode -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release
+```sh
+cmake -S . -B build -DMATCHBOX_BUILD_PLUGIN=OFF -DMATCHBOX_BUILD_TESTS=ON
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
 ```
 
-Alternatively, run the repository helper:
+Run the Python reference tests and checked-in sample analysis with Python 3.9+:
 
-```bash
-./scripts/build_mac.sh
+```sh
+python -m pip install numpy scipy
+python -m unittest discover -s tests -p 'test_*.py' -v
+python scripts/validate_samples.py
 ```
 
-### Windows / Linux
+The sample validator reports dry/wet RMS, peak level, and measured group_energy values for the refrigerator and reference dry WAV files. It fails on non-finite DSP output; the reported RMS ratios are measurements, not a substitute for listening tests.
 
-Install or clone a compatible JUCE checkout into `JUCE/`, then configure and build:
+## Build the JUCE plug-in
 
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release
+The repository does not vendor JUCE or fetch an unpinned dependency during CMake configuration. Place the exact JUCE revision you have approved in JUCE/, and record that revision in your build/release notes.
+
+```sh
+cmake -S . -B build -DMATCHBOX_BUILD_PLUGIN=ON -DMATCHBOX_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel
+ctest --test-dir build -C Release --output-on-failure
 ```
 
-The configured plugin formats are VST3, AU, and Standalone; AU is a macOS format.
+The configured formats are VST3, AU, and Standalone. AU is available on macOS. scripts/build_mac.sh configures a universal arm64;x86_64 build; scripts/build_and_ship.sh is the general JUCE build helper. Both scripts require JUCE to already exist in JUCE/ and run CTest after building. Neither script installs a plug-in into system directories.
 
-### Install
+Install the built VST3 manually:
 
-Copy the built VST3 bundle to the system's VST3 plug-in directory:
-
-- **macOS:** `~/Library/Audio/Plug-Ins/VST3/`
-- **Windows:** `C:\\Program Files\\Common Files\\VST3\\`
-- **Linux:** commonly `~/.vst3/` (or the host's configured VST3 directory)
-
-The macOS build helper also prints the AU component path and install command.
+- macOS: ~/Library/Audio/Plug-Ins/VST3/
+- Windows: C:\Program Files\Common Files\VST3\
+- Linux: commonly ~/.vst3/
 
 ## Parameters
 
-The IDs below are the APVTS identifiers used by the processor and editor attachments.
-
 | APVTS ID | Range / choices | Default | Description |
-|----------|-----------------|---------|-------------|
-| `askedBands` | 1–12 | 5 | Number of conceptual groups |
-| `demonCount` | 1–50 | 8 | Number of resonance-hunting demons |
-| `bitDepth` | 16 / 20 / 24 | 24 | High-frequency roll-off profile |
-| `genreId` | 0–3 | 0 | Neo-Classical / Cinematic Pop / Jazz-Hip-Hop / Flat |
-| `unisonWeight` | 0–1 | 0.6 | Harmonic-interval weighting |
-| `outputGain` | −24…+24 dB | 0 dB | Master output gain |
-| `mix` | 0–1 | 1 | Dry/wet blend |
+|---|---:|---:|---|
+| askedBands | 1–12 | 5 | Number of conceptual groups |
+| demonCount | 0–50 | 8 | Number of resonance-hunting cuts; zero disables them |
+| bitDepth | 16 / 20 / 24 | 24 | High-frequency roll-off profile |
+| genreId | 0–3 | 0 | Neo-Classical / Cinematic Pop / Jazz-Hip-Hop / Flat |
+| unisonWeight | 0–1 | 0.6 | Harmonic-interval weighting |
+| outputGain | −24…+24 dB | 0 dB | Master output gain |
+| mix | 0–1 | 1 | Dry/wet blend |
 
-## Quiet-signal gate calibration
+## Reference implementation note
 
-The production C++ gate is defined in `Source/MatchboxEQ.h`:
+The Python implementation is an offline, block-oriented reference. It uses the same gate constants, frequency ceiling, parameter bounds, and envelope time constant as C++, but calculates one set of adaptive gains from each supplied block. The real-time C++ processor updates its adaptive gains sample-by-sample, so the two implementations are not expected to be bit-identical for arbitrary block sizes.
 
-```cpp
-constexpr float k_target = 0.015f; // Absolute-mean energy target
-constexpr float k_floor  = 0.003f; // Gate floor
-constexpr float k_ramp   = 0.010f; // Smooth transition width
-```
+## Technical paper
 
-The gate is calculated from each group's measured energy. Below the floor, non-demon compensation remains at unity; across the ramp it blends toward the calculated compensation.
+docs/MatchboxEQ_Cross_Domain_Paper_Lewis_Seals.pdf is retained as the original paper. Its earlier envelope coefficient and gate values are superseded by the implementation described above. See docs/ERRATA.md before citing its DSP details.
 
-If you change these constants, validate the result with both quiet noise-floor material (for example, room tone) and ordinary musical passages. Raising the floor or widening the ramp reduces compensation on quieter material; lowering the floor allows compensation to engage sooner. Recheck that quiet musical detail is not being suppressed and that background noise is not being raised objectionably.
+## Validation status
 
-**Reference implementation parity note:** `Source/Pure_python.py` currently uses `k_floor = 0.012` and `k_ramp = 0.008`. Those values do not yet match the merged C++ production settings above. Treat the C++ implementation as authoritative for the current gate calibration until the Python reference is brought into parity.
-
-## Philosophy
-
-Ask for 4 bands → get a 50-band matchbox.
-
-The demons are adaptive cuts that ride the strongest resonances. Everything else is a gentle, level-aware spectral tilt.
-
-Build it, load it, and ask it how many denons it wants.
-
-## Academic paper
-
-The technical paper is included at:
-
-`docs/MatchboxEQ_Cross_Domain_Paper_Lewis_Seals.pdf`
-
-**Title:** *MatchboxEQ: Adaptive Spectral Processing with Agent-Based Resonance Suppression — Primary Audio Applications and Cross-Domain Extensions to Computational Photography and Biomedical / Medical-Technical Signal Engineering*
-
-**Author:** Lewis James Seals (theRealla)
-
-**Publication note:** The paper's Section 3.3 still describes the earlier envelope coefficient `alpha = 0.04`; the current C++ implementation uses `alpha = 0.001`. Update the paper before formal publication.
+A successful DSP-core test run does not establish that the JUCE plug-in builds or that the effect is ready for release. Release validation still requires a build against the recorded JUCE revision, DAW loading, listening tests on digital silence, quiet refrigerator/room-tone material and normal music, plus review of the sample-validator measurements.

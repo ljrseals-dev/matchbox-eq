@@ -1,24 +1,34 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "=== MatchboxEQ Build Pipeline ==="
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BUILD_DIR="${ROOT}/build"
 
-if [ ! -d "JUCE" ]; then
-    echo "Cloning JUCE framework..."
-    git clone --depth 1 https://github.com/juce-framework/JUCE.git
+if [[ "$(uname -s)" != "Darwin" ]]; then
+    echo "error: build_mac.sh must run on macOS" >&2
+    exit 2
 fi
 
-echo "Configuring CMake (Universal Binary)..."
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+if ! command -v cmake >/dev/null 2>&1; then
+    echo "error: CMake 3.22 or newer is required" >&2
+    exit 2
+fi
 
-echo "Building..."
-cmake --build build --config Release -j$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
+if [[ ! -f "${ROOT}/JUCE/CMakeLists.txt" ]]; then
+    echo "error: JUCE is missing at ${ROOT}/JUCE" >&2
+    echo "Place the approved, pinned JUCE checkout there before building the plug-in." >&2
+    exit 2
+fi
 
-echo ""
-echo "=== Build Complete ==="
-echo "VST3:       build/MatchboxEQ_artefacts/Release/VST3/MatchboxEQ.vst3"
-echo "AU:         build/MatchboxEQ_artefacts/Release/AU/MatchboxEQ.component"
-echo "Standalone: build/MatchboxEQ_artefacts/Release/Standalone/MatchboxEQ.app"
-echo ""
-echo "Install VST3:  cp -R build/MatchboxEQ_artefacts/Release/VST3/MatchboxEQ.vst3 ~/Library/Audio/Plug-Ins/VST3/"
-echo "Install AU:    cp -R build/MatchboxEQ_artefacts/Release/AU/MatchboxEQ.component ~/Library/Audio/Plug-Ins/Components/"
+cmake -S "${ROOT}" -B "${BUILD_DIR}" -G Xcode \
+    -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+    -DMATCHBOX_BUILD_PLUGIN=ON \
+    -DMATCHBOX_BUILD_TESTS=ON
+
+cmake --build "${BUILD_DIR}" --config Release --parallel
+ctest --test-dir "${BUILD_DIR}" -C Release --output-on-failure
+
+echo
+echo "Universal macOS build and DSP tests completed."
+echo "VST3: build/MatchboxEQ_artefacts/Release/VST3/MatchboxEQ.vst3"
+echo "AU:   build/MatchboxEQ_artefacts/Release/AU/MatchboxEQ.component"
