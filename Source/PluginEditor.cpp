@@ -112,37 +112,47 @@ void MatchboxEQAudioProcessorEditor::setupKnob (juce::Slider& slider, juce::Labe
 
 void MatchboxEQAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colour::fromRGB (44, 44, 48));
+    const auto background = juce::Colour::fromRGB (34, 35, 39);
+    const auto panel = juce::Colour::fromRGB (22, 23, 27);
+    const auto accent = juce::Colour::fromRGB (255, 160, 40);
 
-    g.setColour (juce::Colour::fromRGB (74, 74, 82));
-    g.drawRect (10, 10, 780, 380, 1);
-
-    g.setColour (juce::Colour::fromRGB (17, 17, 17));
-    g.fillEllipse (315, 45, 170, 170);
-    g.setColour (juce::Colour::fromRGB (208, 208, 213));
-    g.fillEllipse (325, 55, 150, 150);
-    g.setColour (juce::Colours::black);
-    g.setFont (14.0f);
-    g.drawText ("MATCHBOX VU", 325, 120, 150, 30, juce::Justification::centred);
-
-    g.drawLine (400, 130, 360, 80, 2.0f);
-    g.fillEllipse (395, 125, 10, 10);
-
-    g.setColour (juce::Colour::fromRGB (26, 26, 28));
-    g.fillRect (230, 230, 60, 24);
-    g.fillRect (310, 230, 60, 24);
-    g.fillRect (390, 230, 60, 24);
-    g.fillRect (470, 230, 60, 24);
-    g.setColour (juce::Colours::white);
-    g.setFont (11.0f);
-    g.drawText ("AC OFF",   230, 230, 60, 24, juce::Justification::centred);
-    g.drawText ("NO LINE2", 310, 230, 60, 24, juce::Justification::centred);
-    g.drawText ("PLAY",     390, 230, 60, 24, juce::Justification::centred);
-    g.drawText ("RECORD",   470, 230, 60, 24, juce::Justification::centred);
+    g.fillAll (background);
+    g.setColour (juce::Colour::fromRGB (76, 78, 84));
+    g.drawRoundedRectangle (10.0f, 10.0f, 780.0f, 380.0f, 8.0f, 1.0f);
 
     g.setColour (juce::Colours::white);
-    g.setFont (24.0f);
-    g.drawText ("MATCHBOX EQ", 0, 10, 800, 40, juce::Justification::centred);
+    g.setFont (juce::Font (24.0f, juce::Font::bold));
+    g.drawText ("MATCHBOX EQ", 0, 12, 800, 34, juce::Justification::centred);
+
+    // Static brand artwork: all interactive controls are the attached sliders
+    // and combo boxes laid out in resized(), not painted faux switches/meters.
+    g.setColour (panel);
+    g.fillRoundedRectangle (300.0f, 58.0f, 200.0f, 154.0f, 10.0f);
+    g.setColour (accent);
+    g.fillRoundedRectangle (318.0f, 78.0f, 4.0f, 112.0f, 2.0f);
+
+    g.setColour (juce::Colours::white);
+    g.setFont (juce::Font (19.0f, juce::Font::bold));
+    g.drawText ("50-BAND", 332, 91, 150, 28, juce::Justification::centredLeft);
+    g.drawText ("ADAPTIVE EQ", 332, 119, 150, 28, juce::Justification::centredLeft);
+
+    g.setColour (juce::Colour::fromRGB (174, 176, 182));
+    g.setFont (juce::Font (11.0f));
+    g.drawText ("SPECTRAL CONTROL  /  MID-SIDE", 332, 158, 150, 22,
+                juce::Justification::centredLeft);
+
+    g.setColour (accent.withAlpha (0.85f));
+    juce::Path responseMark;
+    responseMark.startNewSubPath (335.0f, 190.0f);
+    responseMark.lineTo (352.0f, 190.0f);
+    responseMark.lineTo (363.0f, 181.0f);
+    responseMark.lineTo (375.0f, 196.0f);
+    responseMark.lineTo (390.0f, 174.0f);
+    responseMark.lineTo (405.0f, 187.0f);
+    responseMark.lineTo (420.0f, 181.0f);
+    responseMark.lineTo (438.0f, 190.0f);
+    responseMark.lineTo (465.0f, 190.0f);
+    g.strokePath (responseMark, juce::PathStrokeType (2.0f));
 }
 
 void MatchboxEQAudioProcessorEditor::resized()
