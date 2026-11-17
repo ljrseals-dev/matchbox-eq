@@ -43,5 +43,8 @@ jobs:
       - name: Run Python reference tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 
+      - name: Check APVTS parameter and editor attachment IDs
+        run: python scripts/check_apvts_ids.py
+
       - name: Validate checked-in WAV samples and group energies
         run: python scripts/validate_samples.py

@@ -8,8 +8,8 @@ from Source.Pure_python import MatchboxEQ
 class MatchboxEQReferenceTests(unittest.TestCase):
     def test_gate_constants_match_cpp_contract(self):
         self.assertEqual(MatchboxEQ.GATE_TARGET, 0.015)
-        self.assertEqual(MatchboxEQ.GATE_FLOOR, 0.003)
-        self.assertEqual(MatchboxEQ.GATE_RAMP, 0.010)
+        self.assertEqual(MatchboxEQ.GATE_FLOOR, 0.007)
+        self.assertEqual(MatchboxEQ.GATE_RAMP, 0.008)
 
     def test_digital_silence_stays_silent(self):
         eq = MatchboxEQ()

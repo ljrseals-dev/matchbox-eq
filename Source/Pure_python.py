@@ -13,8 +13,8 @@ from scipy.signal import lfilter
 
 class MatchboxEQ:
     GATE_TARGET = 0.015
-    GATE_FLOOR = 0.003
-    GATE_RAMP = 0.010
+    GATE_FLOOR = 0.007
+    GATE_RAMP = 0.008
     ENERGY_TIME_CONSTANT_SECONDS = 0.0208
 
     def __init__(self, sample_rate=48000):
