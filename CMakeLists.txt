@@ -46,6 +46,11 @@ if(MATCHBOX_BUILD_PLUGIN)
 
     add_subdirectory(JUCE)
 
+    set(matchbox_plugin_formats VST3 Standalone)
+    if(APPLE)
+        list(APPEND matchbox_plugin_formats AU)
+    endif()
+
     juce_add_plugin(MatchboxEQ
         COMPANY_NAME "FAUSTpianist"
         IS_SYNTH FALSE
@@ -56,7 +61,7 @@ if(MATCHBOX_BUILD_PLUGIN)
         COPY_PLUGIN_AFTER_BUILD FALSE
         PLUGIN_MANUFACTURER_CODE Fpst
         PLUGIN_CODE Mbeq
-        FORMATS VST3 AU Standalone
+        FORMATS ${matchbox_plugin_formats}
         PRODUCT_NAME "MatchboxEQ"
     )
 

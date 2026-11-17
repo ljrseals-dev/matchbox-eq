@@ -26,6 +26,8 @@ ctest --test-dir "${BUILD_DIR}" -C Release --output-on-failure
 echo
 echo "Build and DSP tests completed."
 echo "VST3 output: ${BUILD_DIR}/MatchboxEQ_artefacts/Release/VST3/MatchboxEQ.vst3"
-echo "AU output:   ${BUILD_DIR}/MatchboxEQ_artefacts/Release/AU/MatchboxEQ.component"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "AU output:   ${BUILD_DIR}/MatchboxEQ_artefacts/Release/AU/MatchboxEQ.component"
+fi
 echo "Standalone:  ${BUILD_DIR}/MatchboxEQ_artefacts/Release/Standalone/MatchboxEQ.app"
 echo "No system plug-in directories were modified."

@@ -28,6 +28,12 @@ jobs:
       - name: Configure framework-free C++ tests
         run: cmake -S . -B build -DMATCHBOX_BUILD_PLUGIN=OFF -DMATCHBOX_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 
+      - name: Check build-script syntax
+        run: bash -n scripts/build_and_ship.sh scripts/build_mac.sh
+
+      - name: Compile Python sources
+        run: python -m compileall -q Source tests scripts
+
       - name: Build DSP tests
         run: cmake --build build --parallel
 

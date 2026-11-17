@@ -54,7 +54,7 @@ cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-The configured formats are VST3, AU, and Standalone. AU is available on macOS. scripts/build_mac.sh configures a universal arm64;x86_64 build; scripts/build_and_ship.sh is the general JUCE build helper. Both scripts require JUCE to already exist in JUCE/ and run CTest after building. Neither script installs a plug-in into system directories.
+The configured formats are VST3 and Standalone; AU is added only on macOS. scripts/build_mac.sh configures a universal arm64;x86_64 build; scripts/build_and_ship.sh is the general JUCE build helper. Both scripts require JUCE to already exist in JUCE/ and run CTest after building. Neither script installs a plug-in into system directories.
 
 Install the built VST3 manually:
 
