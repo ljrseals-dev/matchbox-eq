@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Run the Python reference over checked-in dry WAV samples and report metrics."""
 import json
-import math
+import sys
 from pathlib import Path
 
 import numpy as np
 from scipy.io import wavfile
 
-from Source.Pure_python import MatchboxEQ
-
-
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from Source.Pure_python import MatchboxEQ
 SAMPLE_FILES = (
     "samples/Fridge_A_dry.wav",
     "samples/HomeFridge_A_dry.wav",
