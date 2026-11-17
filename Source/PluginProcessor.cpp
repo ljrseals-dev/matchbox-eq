@@ -98,8 +98,15 @@ void MatchboxEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     for (int i = 0; i < numSamples; ++i)
     {
-        const float dryLeft = left[i];
-        const float dryRight = right != nullptr ? right[i] : dryLeft;
+        // Sanitize the dry path as well as the DSP path. Otherwise mix=0
+        // (or a partially dry mix) can pass NaN/Inf straight to the host even
+        // though MatchboxEQ::process() sanitizes its own input copy.
+        const float rawLeft = left[i];
+        const float rawRight = right != nullptr ? right[i] : rawLeft;
+        const float dryLeft = std::isfinite (rawLeft)
+                            ? juce::jlimit (-64.0f, 64.0f, rawLeft) : 0.0f;
+        const float dryRight = std::isfinite (rawRight)
+                             ? juce::jlimit (-64.0f, 64.0f, rawRight) : 0.0f;
         float wetLeft = dryLeft;
         float wetRight = dryRight;
 
